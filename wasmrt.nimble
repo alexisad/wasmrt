@@ -7,7 +7,7 @@ license       = "MIT"
 
 # Dependencies
 
-import os, oswalkdir
+import os#, oswalkdir
 
 proc buildExample(name: string, shouldFail = false) =
   echo "Running test ", name, (if shouldFail: " [should fail]" else: "")
