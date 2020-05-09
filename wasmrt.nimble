@@ -12,7 +12,7 @@ import os, oswalkdir
 proc buildExample(name: string, shouldFail = false) =
   echo "Running test ", name, (if shouldFail: " [should fail]" else: "")
   exec "nim c --out:" & name & ".wasm tests/" & name
-  exec "wasm-gc " & name & ".wasm"
+  #exec "wasm-gc " & name & ".wasm"
   exec "wasm2wat -o " & name & ".wast " & name & ".wasm"
   if shouldFail:
     var failed = false
