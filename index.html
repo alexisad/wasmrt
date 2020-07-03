@@ -1,0 +1,32 @@
+<script>
+    /*
+                            process.on('unhandledRejection', error => {
+                                            console.log('Unhandled promise rejection', error);
+                                            process.exit(1)
+                                        });
+                        */
+
+    function runNimWasm(w) {
+        for (i of WebAssembly.Module.exports(w)) {
+            n = i.name;
+            console.log("n:", n)
+            if (n[0] == ';') {
+                new Function('m', n)(w);
+                break
+            }
+        }
+    }
+
+
+    fetch('t_hello_world.wasm')
+        .then(response =>
+            response.arrayBuffer()
+        )
+        .then(WebAssembly.compile).then(runNimWasm);
+
+
+
+    /*WebAssembly.compile(fetch('t_hello_world.wasm').then(response =>
+        response.arrayBuffer()
+    ).then(runNimWasm))*/
+</script>
