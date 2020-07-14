@@ -31,5 +31,5 @@ task test, "Test":
     if sf.ext == ".nim":
       if sf.name.startsWith("t_"):
         buildExample(sf.name)
-      elif sf.name.startsWith("f_"):
-        buildExample(sf.name, shouldFail = true)
+      #elif sf.name.startsWith("f_"):
+        #buildExample(sf.name, shouldFail = true)

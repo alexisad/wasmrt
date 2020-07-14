@@ -11,6 +11,10 @@
 --d:noSignalHandler
 --exceptions:goto
 --app:lib
+#--d:useFork
+#--d:android
+#--compileOnly
+#--genScript
 
 let llTarget = "wasm32-unknown-unknown-wasm"
 
@@ -23,6 +27,7 @@ switch("passC", "-flto") # Important for code size!
 
 # gc-sections seems to not have any effect
 var linkerOptions = "-nostdlib -Wl,--no-entry,--allow-undefined,--export-dynamic,--gc-sections,--strip-all"
+#var linkerOptions = "-nostdlib -Wl,--no-entry,--export-dynamic,--gc-sections,--strip-all"
 
 switch("clang.options.linker", linkerOptions)
 switch("clang.cpp.options.linker", linkerOptions)

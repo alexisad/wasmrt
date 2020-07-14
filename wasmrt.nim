@@ -9,6 +9,8 @@ macro exportwasm*(p: untyped): untyped =
         result.addPragma(newColonExpr(newIdentNode("codegenDecl"), newLit("extern \"C\" __attribute__ ((visibility (\"default\"))) $# $#$#")))
     else:
         result.addPragma(newColonExpr(newIdentNode("codegenDecl"), newLit("__attribute__ ((visibility (\"default\"))) $# $#$#")))
+    #echo "result-exportwasm"
+    #echo result.repr
 
 proc stripSinkFromArgType(t: NimNode): NimNode =
   result = t
@@ -35,11 +37,20 @@ macro importwasm*(body: string, p: untyped): untyped =
 
     result.addPragma(newIdentNode("importc"))
     result.addPragma(newColonExpr(newIdentNode("codegenDecl"), newLit("$# $#$# __asm__(\"" & escapeJs("\"" & argString & "\";" & body.strVal.minifyJs, "$$") & "\")")))
+    #echo "result-importwasm"
+    #echo result.repr
 
 const initCode = """;
-var W = WebAssembly, f = W.Module.imports(m), o = {}, g = typeof window == 'undefined' ? global : window, q, b;
+var W = WebAssembly, f = W.Module.imports(m), fE = W.Module.exports(m), o = {}, g = typeof window == 'undefined' ? global : window, q, b, xb;
+/*for (i in fE) {
+    var n = fE[i].name;
+    //if(n == 'fib') fE.fib();
+    //console.log("exportName:", fE[i]);
+}*/
+
 for (i in f) {
     var a = '', n = f[i].name;
+    //console.log("importName:", n);
     if (n[0] == '"')
         o[n] = new Function(n.substring(1, n.indexOf('"', 1)), n);
     else
@@ -49,12 +60,18 @@ for (i in f) {
 
 g._nimc = [];
 
-g._nimmu = () => b = new Int8Array(q.buffer);
+g._nimmu = () => b = new Uint8Array(q.buffer);
+//g._nimmu2 = () => xb = new Uint32Array(q.buffer);
+
+g._getB = () => b;
 
 g._nimsj = a => {
+    //for(var i=0; )
+    console.log("bmem:", b[a]);
     var s = '';
     while (b[a]) s += String.fromCharCode(b[a++]);
-    return s
+    return s;
+    //String.fromCharCode.apply(null, new Uint8Array(b[a]));
 };
 
 g._nims = (a, l) => {
@@ -63,16 +80,43 @@ g._nims = (a, l) => {
     return s
 };
 
-W.instantiate(m, {env: o}).then(m => {
+g._str2ab = str => {
+  /*var buf = new ArrayBuffer(str.length);
+  var bufView = new Int8Array(buf);*/
+  for (var i=0, strLen=str.length; i < strLen; i++) {
+    b[i] = str.charCodeAt(i);
+  }
+};
+
+//console.log("oEnv:", o);
+
+W.instantiate(m, {env: o/*, memory: new W.Memory({
+            initial: 256,
+            maximum: 256
+        }), DYNAMICTOP_PTR: 4096*/
+    }).then(m => {
+    //console.log("instantiate:", m.exports.memory.grow(1000));
+    //console.log("instantiate:", m.exports.memory.grow(1000));
     g._nimm = m;
     q = m.exports.memory;
     _nimmu();
-    m.exports['-']()
+    //_nimmu2();
+    m.exports['-']();
+    /*if(m.exports['fib']){
+      g.nimFuncs = g.nimFuncs || {};
+      g.nimFuncs.fib = m.exports.fib;
+      //var r = JSON.parse(g._nimsj( m.exports.fib() ));
+      //console.log("fib:", r);
+    }*/
+    
 })
 """.minifyJs().escapeJs()
 
 {.emit: """
 #define NIM_WASM_EXPORT N_LIB_EXPORT __attribute__((visibility ("default")))
+
+extern unsigned char __heap_base;
+unsigned int bump_pointer = &__heap_base;
 
 int stdout = 0;
 int stderr = 1;
@@ -84,6 +128,15 @@ void nimWasmMain() {
 }
 
 NIM_WASM_EXPORT const char __nimWasmInit __asm__(""" & '"' & initCode & """") = 0;
+
+
+N_LIB_EXPORT void* malloc(int n) {
+  unsigned int r = bump_pointer;
+  bump_pointer += n;
+  return (void *)r;
+}
+
+
 
 N_LIB_EXPORT void* memcpy(void* a, void* b, size_t s) {
     char* aa = (char*)a;
